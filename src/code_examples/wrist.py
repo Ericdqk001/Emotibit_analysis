@@ -1,8 +1,8 @@
 import os
 
 import pandas as pd
-from emotibit_task_analysis import calculate_task_stats
-from loading_data import load_emotibit_sensor
+from src.code_examples.emotibit_task_analysis import calculate_task_stats
+from src.code_examples.loading_data import load_emotibit_sensor
 from stat_test import calculate_task_ttests
 
 
