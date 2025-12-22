@@ -1,0 +1,67 @@
+[project]
+name = "Emotibit_analysis"
+version = "0.1.0"
+description = "Data analysis pipeline for INT-ACT project"
+authors = [
+    {name = "Qingkun Deng", email = "qdeng2@ed.ac.uk"}
+]
+requires-python = ">=3.11"
+dependencies = [
+"pandas",
+"numpy",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8.0",
+    "pre-commit>=4.0.0",
+    "pyright>=1.1.407",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+    packages = ["src"]
+
+# UV configuration
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "D",   # pydocstyle
+    "UP",  # pyupgrade
+]
+ignore = [
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", # Missing docstrings
+    "E712",  # Comparison to True/False
+    "E741",  # Ambiguous variable name
+    "D205",  # 1 blank line required between summary line and description
+    "D209",  # Multi-line docstring closing quotes should be on a separate line
+    "D210",  # No whitespaces allowed surrounding docstring text
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", "**/.pytest_cache"]
+extraPaths = ["src"]
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"
