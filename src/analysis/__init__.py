@@ -1,0 +1,1 @@
+"""EmotiBit descriptive analysis package."""
