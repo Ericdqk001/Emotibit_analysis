@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pandas as pd
 
-# Sensors to load by default
-DEFAULT_SENSORS = ["EA", "EL", "HR", "T1", "TH", "PI", "PR", "PG"]
+# Sensors to load by default (matching example/ pattern for TABLE 1)
+DEFAULT_SENSORS = ["HR", "EA", "PG"]  # Heart Rate, EDA, PPG Green
 
 
 @dataclass
