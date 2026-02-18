@@ -67,3 +67,58 @@ python src/emotibit/main.py ^
     C:\EmotiBitSoftware\EmotiBitDataParser.exe ^
     Z:\INTACT-CS2_restructured\emotibit
 ```
+
+## Get MCI emotibit descriptive statistics
+
+```bash
+python src/MCI/main.py <dataparser_path> <source_path> <output_path>
+```
+
+- `source_path`: flat folder with raw MCI emotibit files
+- `output_path`: where the restructured data will be written
+
+The pipeline restructures the flat files into `day*/INTACT-MCI-XX/` folders, then parses, loads, and computes descriptive statistics.
+
+Results saved to `src/MCI/output/mci_descriptive_stats.csv`.
+
+### Source path (flat folder)
+
+macOS (mounted datastore):
+```
+/Volumes/INT-ACT/INTACT-MCI/emotibit
+```
+
+Windows (mapped drive):
+```
+Z:\INTACT-MCI\emotibit
+```
+
+### Output path (restructured folder)
+
+macOS:
+```
+/Volumes/INT-ACT/INTACT-MCI_restructured
+```
+
+Windows:
+```
+Z:\INTACT-MCI_restructured
+```
+
+### Full example (macOS)
+
+```bash
+python src/MCI/main.py \
+    ~/EmotiBitSoftware_v1/EmotiBitDataParser.app/Contents/MacOS/EmotiBitDataParser \
+    /Volumes/INT-ACT/INTACT-MCI/emotibit \
+    /Volumes/INT-ACT/INTACT-MCI_restructured
+```
+
+### Full example (Windows)
+
+```bash
+python src/MCI/main.py ^
+    C:\EmotiBitSoftware\EmotiBitDataParser.exe ^
+    Z:\INTACT-MCI\emotibit ^
+    Z:\INTACT-MCI_restructured
+```
