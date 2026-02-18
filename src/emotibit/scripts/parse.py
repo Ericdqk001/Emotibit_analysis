@@ -7,25 +7,22 @@ into separate sensor files.
 import subprocess
 from pathlib import Path
 
-# Path to the EmotiBit DataParser executable (inside .app bundle)
-DATAPARSER_PATH = Path(
-    "/Users/qingkundeng/Desktop/EmotiBitSoftware_v1/"
-    "EmotiBitDataParser.app/Contents/MacOS/EmotiBitDataParser"
-)
 
-
-def parse_with_dataparser(raw_csv_path: Path, timeout: int | None = None) -> bool:
+def parse_with_dataparser(
+    raw_csv_path: Path, parser_path: Path, timeout: int | None = None
+) -> bool:
     """Call EmotiBit DataParser app with the raw file.
 
     Args:
         raw_csv_path: Path to the raw EmotiBit CSV file.
+        parser_path: Path to the EmotiBit DataParser executable.
         timeout: Maximum seconds to wait for parsing.
 
     Returns:
         True if parsing succeeded, False otherwise.
     """
-    if not DATAPARSER_PATH.exists():
-        print(f"DataParser not found at: {DATAPARSER_PATH}")
+    if not parser_path.exists():
+        print(f"DataParser not found at: {parser_path}")
         return False
 
     if not raw_csv_path.exists():
@@ -36,7 +33,7 @@ def parse_with_dataparser(raw_csv_path: Path, timeout: int | None = None) -> boo
 
     try:
         result = subprocess.run(
-            [str(DATAPARSER_PATH), str(raw_csv_path)],
+            [str(parser_path), str(raw_csv_path)],
             timeout=timeout,
             capture_output=True,
             text=True,
@@ -70,11 +67,14 @@ def parse_with_dataparser(raw_csv_path: Path, timeout: int | None = None) -> boo
         return False
 
 
-def parse_all_recordings(base_path: Path, timeout: int | None = None) -> dict:
+def parse_all_recordings(
+    base_path: Path, parser_path: Path, timeout: int | None = None
+) -> dict:
     """Parse all EmotiBit recordings.
 
     Args:
         base_path: Base path to emotibit folder
+        parser_path: Path to the EmotiBit DataParser executable
         timeout: Maximum seconds to wait for parsing each file
 
     Returns:
@@ -94,7 +94,9 @@ def parse_all_recordings(base_path: Path, timeout: int | None = None) -> dict:
                     print(f"No raw CSV found: {participant_dir.relative_to(base_path)}")
                     continue
 
-                success = parse_with_dataparser(raw_csv[0], timeout=timeout)
+                success = parse_with_dataparser(
+                    raw_csv[0], parser_path, timeout=timeout
+                )
                 if success:
                     counts["parsed"] += 1
                 else:
@@ -106,30 +108,20 @@ def parse_all_recordings(base_path: Path, timeout: int | None = None) -> dict:
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) > 1:
-        path = Path(sys.argv[1])
+    if len(sys.argv) > 2:
+        parser_path = Path(sys.argv[1])
+        path = Path(sys.argv[2])
 
-        # Check if it's a single file or a directory
         if path.is_file():
-            success = parse_with_dataparser(path)
+            success = parse_with_dataparser(path, parser_path)
             print(f"\nResult: {'Success' if success else 'Failed'}")
         elif path.is_dir():
             print(f"Batch parsing all recordings in: {path}\n")
-            counts = parse_all_recordings(path)
+            counts = parse_all_recordings(path, parser_path)
             print("\nSummary:")
             print(f"  Parsed: {counts['parsed']}")
             print(f"  Failed: {counts['failed']}")
         else:
             print(f"Error: {path} is not a file or directory")
     else:
-        print("Usage: python parse_raw_data.py <path>")
-        print("\nSingle file:")
-        print(
-            "  python parse_raw_data.py "
-            "/Volumes/INT-ACT/INTACT-CS2_restructured/emotibit/day1/Pair1/O-12/2025-10-13_14-49-24-526653.csv"
-        )
-        print("\nBatch (all recordings):")
-        print(
-            "  python parse_raw_data.py "
-            "/Volumes/INT-ACT/INTACT-CS2_restructured/emotibit"
-        )
+        print("Usage: python parse.py <dataparser_path> <emotibit_data_path>")

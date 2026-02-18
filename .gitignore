@@ -217,3 +217,9 @@ code_examples/
 
 # data files
 data/
+
+DATA_STRUCTURE.md
+metadata.json
+src/data_structure/
+src/analysis/
+questions.md
