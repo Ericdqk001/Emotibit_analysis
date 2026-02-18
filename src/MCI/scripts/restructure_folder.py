@@ -172,16 +172,6 @@ if __name__ == "__main__":
         print(f"Error: {source_path} not found. Is the volume mounted?")
         exit(1)
 
-    # Dry run first
-    print("DRY RUN - no files will be copied\n")
-    operations = restructure_mci(source_path, output_path, dry_run=True)
-    print(f"\nTotal: {len(operations)} files to copy")
-
-    # Ask for confirmation
-    response = input("\nProceed with actual restructuring? (yes/no): ")
-    if response.lower() == "yes":
-        print("\nRestructuring...")
-        operations = restructure_mci(source_path, output_path, dry_run=False)
-        print(f"\nDone. {len(operations)} files copied to {output_path}")
-    else:
-        print("Aborted.")
+    print("Restructuring...")
+    operations = restructure_mci(source_path, output_path, dry_run=False)
+    print(f"\nDone. {len(operations)} files copied to {output_path}")
