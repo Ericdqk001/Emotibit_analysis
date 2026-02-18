@@ -5,29 +5,27 @@ Parses, loads, and computes descriptive statistics for all EmotiBit recordings.
 Usage:
     python src/emotibit/main.py <dataparser_path> <emotibit_data_path>
 
-Example:
-    python src/emotibit/main.py /path/to/EmotiBitDataParser /path/to/emotibit
+Example (macOS):
+    python src/emotibit/main.py <parser_path> <data_path>
+    parser_path: .../EmotiBitDataParser.app/Contents/MacOS/EmotiBitDataParser
+    data_path: /Volumes/INT-ACT/INTACT-CS2_restructured/emotibit
 """
 
 import sys
 from pathlib import Path
 
-# Add scripts dir to path for imports
-sys.path.insert(0, str(Path(__file__).parent / "scripts"))
-
-from src.emotibit.scripts.describe import compute_recording_stats
-from src.emotibit.scripts.load import discover_recordings, load_recording
-from src.emotibit.scripts.parse import parse_all_recordings
+import pandas as pd
+from scripts.describe import compute_recording_stats
+from scripts.load import discover_recordings, load_recording
+from scripts.parse import parse_all_recordings
 
 
 def main(parser_path: Path, data_path: Path) -> None:
-    import pandas as pd
-
     output_dir = Path(__file__).parent / "output"
     output_dir.mkdir(exist_ok=True)
 
     # Step 1: Parse all recordings
-    # Comment out if already parsed
+    # Uncomment below when DataParser is available
     print("=" * 60)
     print("STEP 1: Parsing raw EmotiBit data")
     print("=" * 60)
@@ -80,10 +78,6 @@ if __name__ == "__main__":
     if len(sys.argv) != 3:
         print(
             "Usage: python src/emotibit/main.py <dataparser_path> <emotibit_data_path>"
-        )
-        print("\nExample:")
-        print(
-            " python src/emotibit/main.py /path/to/EmotiBitDataParser /path/to/emotibit"
         )
         sys.exit(1)
 

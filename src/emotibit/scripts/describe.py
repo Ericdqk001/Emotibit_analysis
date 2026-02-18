@@ -8,7 +8,6 @@ Plus: duration, sampling_rate, percentiles
 from pathlib import Path
 
 import pandas as pd
-from scipy import stats
 
 
 def compute_sensor_stats(df: pd.DataFrame, value_col: str) -> dict:
@@ -43,10 +42,6 @@ def compute_sensor_stats(df: pd.DataFrame, value_col: str) -> dict:
         "q25": round(values.quantile(0.25), 4),
         "q75": round(values.quantile(0.75), 4),
     }
-
-    # Mode (from scipy.stats, as in the example)
-    mode_result = stats.mode(values, keepdims=True)
-    result["mode"] = round(float(mode_result.mode[0]), 4)
 
     return result
 
@@ -83,7 +78,6 @@ def compute_recording_stats(
         "median",
         "q75",
         "max",
-        "mode",
     ]
     selected_cols = [c for c in cols if c in result.columns]
     if not selected_cols:
