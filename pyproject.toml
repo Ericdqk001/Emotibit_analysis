@@ -7,10 +7,11 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-"pandas",
-"numpy",
-"matplotlib",
-"scipy",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "openpyxl>=3.1.5",
 ]
 
 [dependency-groups]
