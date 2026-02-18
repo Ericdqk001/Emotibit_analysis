@@ -50,7 +50,7 @@ def main(parser_path: Path, data_path: Path) -> None:
         stats_df = compute_recording_stats(data)
         stats_df["day"] = r.day
         stats_df["pair"] = r.pair_id
-        stats_df["participant"] = r.participant
+        stats_df["participant"] = f"INTACT-CS2-{r.participant}"
         all_stats.append(stats_df)
 
     if not all_stats:
