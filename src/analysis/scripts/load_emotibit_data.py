@@ -43,10 +43,15 @@ def discover_recordings(base_path: Path) -> list[RecordingInfo]:
     for day_dir in sorted(base_path.glob("day*")):
         for pair_dir in sorted(day_dir.glob("Pair*")):
             for participant_dir in sorted(pair_dir.glob("*-*")):
-                # Find parsed sensor files to get timestamp
-                sensor_files = list(participant_dir.glob("*_EA.csv"))
+                # Find ANY parsed sensor file to get timestamp
+                # Check for HR, EA, or PG (our target sensors)
+                sensor_files = []
+                for sensor in DEFAULT_SENSORS:
+                    sensor_files.extend(participant_dir.glob(f"*_{sensor}.csv"))
+
                 if sensor_files:
-                    # Extract timestamp from filename: {timestamp}_EA.csv
+                    # Extract timestamp from first found file
+                    # Format: {timestamp}_{SENSOR}.csv
                     timestamp = sensor_files[0].stem.rsplit("_", 1)[0]
                     recordings.append(
                         RecordingInfo(
@@ -67,19 +72,36 @@ def load_sensor(csv_path: Path) -> pd.DataFrame:
     Pattern from code_examples/loading_data.py:
     - LocalTimestamp column → AbsoluteTime (UTC datetime)
     - Create relative Time_s from first timestamp
+
+    Raises:
+        ValueError: If LocalTimestamp column is missing from parsed CSV
     """
     df = pd.read_csv(csv_path)
 
-    if "LocalTimestamp" in df.columns:
-        df["LocalTimestamp"] = pd.to_numeric(df["LocalTimestamp"], errors="coerce")
-        df = df.dropna(subset=["LocalTimestamp"])
+    # Verify required column exists
+    if "LocalTimestamp" not in df.columns:
+        raise ValueError(
+            f"Missing 'LocalTimestamp' column in {csv_path.name}. "
+            f"Available columns: {list(df.columns)}. "
+            f"This file may not be properly parsed by DataParser."
+        )
 
-        # Convert to UTC datetime (line 47-49 from example)
-        df["AbsoluteTime"] = pd.to_datetime(df["LocalTimestamp"], unit="s", utc=True)
+    # Convert to numeric, handling any malformed values
+    df["LocalTimestamp"] = pd.to_numeric(df["LocalTimestamp"], errors="coerce")
+    df = df.dropna(subset=["LocalTimestamp"])
 
-        # Relative time in seconds (line 52-53 from example)
-        first_ts = df["LocalTimestamp"].iloc[0]
-        df["Time_s"] = df["LocalTimestamp"] - first_ts
+    if df.empty:
+        raise ValueError(
+            f"No valid timestamps in {csv_path.name}. "
+            f"All LocalTimestamp values are NaN or missing."
+        )
+
+    # Convert to UTC datetime (line 47-49 from example)
+    df["AbsoluteTime"] = pd.to_datetime(df["LocalTimestamp"], unit="s", utc=True)
+
+    # Relative time in seconds (line 52-53 from example)
+    first_ts = df["LocalTimestamp"].iloc[0]
+    df["Time_s"] = df["LocalTimestamp"] - first_ts
 
     return df
 

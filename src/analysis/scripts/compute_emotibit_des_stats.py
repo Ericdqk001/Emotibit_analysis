@@ -69,6 +69,7 @@ def compute_recording_stats(
         rows.append(sensor_stats)
 
     result = pd.DataFrame(rows)
+
     # Reorder columns
     cols = [
         "sensor",
@@ -110,7 +111,7 @@ def save_stats(stats_df: pd.DataFrame, output_path: Path) -> None:
 if __name__ == "__main__":
     import sys
 
-    from load_data import discover_recordings, load_recording
+    from load_emotibit_data import discover_recordings, load_recording
 
     base_path = Path(sys.argv[1]) if len(sys.argv) > 1 else None
 
