@@ -10,8 +10,6 @@ import re
 import shutil
 from pathlib import Path
 
-import pandas as pd
-
 
 def extract_timestamp_from_csv(csv_path: Path) -> str | None:
     """Extract timestamp from the first line of a CSV file.
@@ -51,10 +49,15 @@ def parse_mci_filename(filename: str) -> dict | None:
 
 
 def concatenate_csvs(csv_paths: list[Path], dest_path: Path) -> None:
-    """Concatenate multiple raw EmotiBit CSVs into one file."""
-    dfs = [pd.read_csv(p, header=None) for p in csv_paths]
-    combined = pd.concat(dfs, ignore_index=True)
-    combined.to_csv(dest_path, index=False, header=False)
+    """Concatenate multiple raw EmotiBit CSVs into one file.
+
+    Raw EmotiBit CSVs have variable column counts per row, so we concatenate
+    them as raw text rather than parsing as structured DataFrames.
+    """
+    with open(dest_path, "w") as outfile:
+        for csv_path in csv_paths:
+            with open(csv_path) as infile:
+                outfile.write(infile.read())
 
 
 def restructure_mci(
