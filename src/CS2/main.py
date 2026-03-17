@@ -1,14 +1,12 @@
-"""EmotiBit analysis pipeline.
+"""CS2 EmotiBit analysis pipeline.
 
-Parses, loads, and computes descriptive statistics for all EmotiBit recordings.
+Loads and computes descriptive statistics for all CS2 EmotiBit recordings.
 
 Usage:
-    python src/emotibit/main.py <dataparser_path> <emotibit_data_path>
+    python src/CS2/main.py <data_path>
 
-Example (macOS):
-    python src/emotibit/main.py <parser_path> <data_path>
-    parser_path: .../EmotiBitDataParser.app/Contents/MacOS/EmotiBitDataParser
-    data_path: /Volumes/INT-ACT/INTACT-CS2_restructured/emotibit
+Example:
+    python src/CS2/main.py data/INTACT-CS2_restructured
 """
 
 import sys
@@ -18,49 +16,50 @@ import pandas as pd
 from scripts.describe import compute_recording_stats
 from scripts.load import discover_recordings, load_recording
 
-# from scripts.parse import parse_all_recordings
 
-
-def main(parser_path: Path, data_path: Path) -> None:
+def main(data_path: Path) -> None:
     output_dir = Path(__file__).parent / "output"
     output_dir.mkdir(exist_ok=True)
 
-    # Step 1: Parse all recordings
-    # Uncomment below when DataParser is available
-    print("=" * 60)
-    print("STEP 1: Parsing raw EmotiBit data")
-    print("=" * 60)
-    # counts = parse_all_recordings(data_path, parser_path)
-    # print(f"\nParsing summary: {counts['parsed']} parsed, {counts['failed']} failed")
+    emotibit_path = data_path / "emotibit"
 
-    # Step 2: Load and compute stats for all recordings
-    print("\n" + "=" * 60)
-    print("STEP 2: Loading and computing descriptive statistics")
+    # Step 1: Load and compute stats for all recordings
     print("=" * 60)
-    recordings = discover_recordings(data_path)
+    print("STEP 1: Loading and computing descriptive statistics")
+    print("=" * 60)
+    recordings = discover_recordings(emotibit_path)
     print(f"Found {len(recordings)} recordings\n")
 
     all_stats = []
     for r in recordings:
         print(f"  Processing: {r.day}/{r.pair_id}/{r.participant}")
-        data = load_recording(r.path, r.timestamp)
-        if not data:
-            print("    No sensor data loaded, skipping")
-            continue
+        try:
+            data = load_recording(r.path, r.timestamp)
+            if not data:
+                print("    No sensor data loaded, skipping")
+                continue
 
-        stats_df = compute_recording_stats(data)
-        stats_df["day"] = r.day
-        stats_df["pair"] = r.pair_id
-        stats_df["participant"] = f"INTACT-CS2-{r.participant}"
-        all_stats.append(stats_df)
+            stats_df = compute_recording_stats(data)
+            stats_df["day"] = r.day
+            stats_df["pair"] = r.pair_id
+            stats_df["participant"] = f"INTACT-CS2-{r.participant}"
+            all_stats.append(stats_df)
+        except Exception as e:
+            print(
+                f"    ERROR processing {r.day}/{r.pair_id}/{r.participant}: "
+                f"{type(e).__name__}: {e}"
+            )
+            print(f"    Recording path: {r.path}")
+            print(f"    Timestamp: {r.timestamp}")
+            continue
 
     if not all_stats:
         print("No recordings loaded successfully")
         return
 
-    # Step 3: Save results
+    # Step 2: Save results
     print("\n" + "=" * 60)
-    print("STEP 3: Saving results")
+    print("STEP 2: Saving results")
     print("=" * 60)
     result = pd.concat(all_stats, ignore_index=True)
 
@@ -76,21 +75,16 @@ def main(parser_path: Path, data_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print(
-            "Usage: python src/emotibit/main.py <dataparser_path> <emotibit_data_path>"
-        )
+    if len(sys.argv) != 2:
+        print("Usage: python src/CS2/main.py <data_path>")
+        print("\nExample:")
+        print("  python src/CS2/main.py data/INTACT-CS2_restructured")
         sys.exit(1)
 
-    parser_path = Path(sys.argv[1])
-    data_path = Path(sys.argv[2])
-
-    if not parser_path.exists():
-        print(f"Error: DataParser not found at {parser_path}")
-        sys.exit(1)
+    data_path = Path(sys.argv[1])
 
     if not data_path.exists():
         print(f"Error: Data path not found at {data_path}")
         sys.exit(1)
 
-    main(parser_path, data_path)
+    main(data_path)
