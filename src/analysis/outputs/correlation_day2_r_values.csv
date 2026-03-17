@@ -1,0 +1,4 @@
+sensor,positive_affect,negative_affect,VAS_nervousness,VAS_interest,VAS_happiness,VAS_belonging,VAS_wellbeing
+HR_mean,-0.3403,-0.2229,0.1277,-0.1954,-0.1913,-0.3339,-0.533
+EA_mean,0.0383,0.1466,-0.0859,0.0099,0.1118,0.191,0.1682
+PG_mean,0.0823,-0.0492,0.1665,0.0444,-0.0608,-0.109,-0.1724

@@ -298,11 +298,7 @@ if __name__ == "__main__":
     project_root = script_dir.parent.parent.parent
 
     cs2_path = (
-        project_root
-        / "src"
-        / "emotibit"
-        / "output"
-        / "emotibit_CS2_descriptive_stats.csv"
+        project_root / "src" / "CS2" / "output" / "emotibit_CS2_descriptive_stats.csv"
     )
     mci_path = project_root / "src" / "MCI" / "output" / "mci_descriptive_stats.csv"
     output_dir = script_dir.parent / "outputs"
