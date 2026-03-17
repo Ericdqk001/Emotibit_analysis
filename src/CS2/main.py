@@ -17,7 +17,8 @@ from pathlib import Path
 import pandas as pd
 from scripts.describe import compute_recording_stats
 from scripts.load import discover_recordings, load_recording
-from scripts.parse import parse_all_recordings
+
+# from scripts.parse import parse_all_recordings
 
 
 def main(parser_path: Path, data_path: Path) -> None:
@@ -29,8 +30,8 @@ def main(parser_path: Path, data_path: Path) -> None:
     print("=" * 60)
     print("STEP 1: Parsing raw EmotiBit data")
     print("=" * 60)
-    counts = parse_all_recordings(data_path, parser_path)
-    print(f"\nParsing summary: {counts['parsed']} parsed, {counts['failed']} failed")
+    # counts = parse_all_recordings(data_path, parser_path)
+    # print(f"\nParsing summary: {counts['parsed']} parsed, {counts['failed']} failed")
 
     # Step 2: Load and compute stats for all recordings
     print("\n" + "=" * 60)
@@ -68,7 +69,7 @@ def main(parser_path: Path, data_path: Path) -> None:
     other_cols = [c for c in result.columns if c not in id_cols]
     result = result[id_cols + other_cols]
 
-    output_file = output_dir / "emotibit_descriptive_stats.csv"
+    output_file = output_dir / "emotibit_CS2_descriptive_stats.csv"
     result.to_csv(output_file, index=False)
     print(f"Saved to: {output_file}")
     print(f"\n{result.to_string(index=False)}")
