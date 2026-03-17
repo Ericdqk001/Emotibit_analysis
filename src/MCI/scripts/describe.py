@@ -20,7 +20,8 @@ def compute_sensor_stats(df: pd.DataFrame, value_col: str) -> dict:
     Returns:
         Dictionary of statistics
     """
-    values = df[value_col].dropna()
+    # Convert to numeric, handling mixed int/str types from chunked CSV reading
+    values: pd.Series = pd.to_numeric(df[value_col], errors="coerce").dropna()  # type: ignore[assignment]
 
     if len(values) == 0:
         return {"n_samples": 0}
@@ -59,9 +60,32 @@ def compute_recording_stats(
     """
     rows = []
     for sensor, df in data.items():
-        sensor_stats = compute_sensor_stats(df, sensor)
-        sensor_stats["sensor"] = sensor
-        rows.append(sensor_stats)
+        try:
+            sensor_stats = compute_sensor_stats(df, sensor)
+            sensor_stats["sensor"] = sensor
+            rows.append(sensor_stats)
+        except Exception as e:
+            print(f"      ERROR in sensor '{sensor}': {type(e).__name__}: {e}")
+            # Print sample of problematic values
+            values = df[sensor]
+            print(f"      Data type: {values.dtype}")
+            print(f"      Total values: {len(values)}")
+
+            # Check all unique types (not just first 100)
+            all_types = {type(v).__name__ for v in values.dropna()}
+            print(f"      All unique types in data: {all_types}")
+
+            # Find and print string values
+            string_values = [v for v in values if isinstance(v, str)]
+            if string_values:
+                print(f"      Found {len(string_values)} string values")
+                print(f"      First 10 strings: {string_values[:10]}")
+                # Find indices of string values
+                string_indices = [i for i, v in enumerate(values) if isinstance(v, str)]
+                print(
+                    f"      String locations (first 10 indices): {string_indices[:10]}"
+                )
+            raise
 
     result = pd.DataFrame(rows)
 

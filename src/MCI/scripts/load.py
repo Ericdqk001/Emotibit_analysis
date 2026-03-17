@@ -73,7 +73,10 @@ def load_sensor(csv_path: Path) -> pd.DataFrame:
     Raises:
         ValueError: If LocalTimestamp column is missing from parsed CSV
     """
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(
+        csv_path,
+        # low_memory=False,
+    )
 
     # Verify required column exists
     if "LocalTimestamp" not in df.columns:
