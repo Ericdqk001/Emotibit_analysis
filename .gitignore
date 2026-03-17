@@ -1,3 +1,6 @@
+# macOS
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -224,3 +227,6 @@ src/data_structure/
 src/analysis/
 questions.md
 src/MCI/test_data
+
+INT-MCI/
+INT-MCI_restructured/
