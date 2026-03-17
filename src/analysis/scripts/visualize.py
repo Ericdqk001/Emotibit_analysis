@@ -1,173 +1,341 @@
-"""Visualize EmotiBit sensor data.
+"""Visualization of EmotiBit descriptive statistics.
 
-Creates:
-1. Time series plots (signal over time)
-2. Recording overview (all sensors in one figure)
-3. Distribution plots (histograms)
+Creates academic-style boxplots of sensor mean values (HR, EA, PG)
+across participants, grouped by day. CS2 and MCI data are combined.
 """
 
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
-# Sensor display names and units
-SENSOR_INFO = {
-    "EA": ("EDA Amplitude", "μS"),
-    "EL": ("EDA Level", "raw"),
-    "HR": ("Heart Rate", "bpm"),
-    "T1": ("Temperature 1", "°C"),
-    "TH": ("Temperature H", "°C"),
-    "PI": ("PPG Infrared", "raw"),
-    "PR": ("PPG Red", "raw"),
-    "PG": ("PPG Green", "raw"),
+SENSORS = {
+    "HR": {"label": "Heart Rate", "title": "HR"},
+    "EA": {"label": "Electrodermal Activity", "title": "EDA"},
+    "PG": {"label": "PPG Green", "title": "PG"},
 }
 
 
-def plot_time_series(
-    df: pd.DataFrame,
-    sensor: str,
-    output_path: Path | None = None,
-) -> None:
-    """Plot time series for a single sensor."""
-    name, unit = SENSOR_INFO.get(sensor, (sensor, ""))
+def load_combined_stats(cs2_path: Path, mci_path: Path) -> pd.DataFrame:
+    """Load and combine CS2 and MCI descriptive stats."""
+    cs2 = pd.read_csv(cs2_path)
+    cs2["study"] = "CS2"
+    mci = pd.read_csv(mci_path)
+    mci["study"] = "MCI"
 
-    fig, ax = plt.subplots(figsize=(12, 4))
-    ax.plot(df["Time_s"], df[sensor], linewidth=0.5)
-    ax.set_xlabel("Time (seconds)")
-    ax.set_ylabel(f"{name} ({unit})")
-    ax.set_title(f"{name} over time")
-    ax.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    if output_path:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(output_path, dpi=150)
-        print(f"Saved: {output_path.name}")
-        plt.close()
-    else:
-        plt.show()
-
-
-def plot_recording_overview(
-    data: dict[str, pd.DataFrame],
-    title: str = "",
-    output_path: Path | None = None,
-) -> None:
-    """Create multi-panel figure showing all sensors."""
-    sensors = list(data.keys())
-    n_sensors = len(sensors)
-
-    fig, axes = plt.subplots(n_sensors, 1, figsize=(14, 2 * n_sensors), sharex=True)
-    if n_sensors == 1:
-        axes = [axes]
-
-    for ax, sensor in zip(axes, sensors, strict=False):
-        df = data[sensor]
-        name, unit = SENSOR_INFO.get(sensor, (sensor, ""))
-
-        ax.plot(df["Time_s"], df[sensor], linewidth=0.5)
-        ax.set_ylabel(f"{name}\n({unit})", fontsize=9)
-        ax.grid(True, alpha=0.3)
-
-    axes[-1].set_xlabel("Time (seconds)")
-    if title:
-        fig.suptitle(title, fontsize=12, fontweight="bold")
-
-    plt.tight_layout()
-    if output_path:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(output_path, dpi=150)
-        print(f"Saved: {output_path.name}")
-        plt.close()
-    else:
-        plt.show()
+    cols = [
+        "day",
+        "participant",
+        "sensor",
+        "study",
+        "mean",
+        "std",
+        "min",
+        "q25",
+        "median",
+        "q75",
+        "max",
+    ]
+    combined: pd.DataFrame = pd.concat([cs2[cols], mci[cols]], ignore_index=True)  # type: ignore[assignment]
+    return combined
 
 
-def plot_distribution(
-    df: pd.DataFrame,
-    sensor: str,
-    output_path: Path | None = None,
-) -> None:
-    """Plot histogram of sensor values."""
-    name, unit = SENSOR_INFO.get(sensor, (sensor, ""))
-    values = df[sensor].dropna()
-
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.hist(values, bins=50, edgecolor="black", alpha=0.7)
-    ax.set_xlabel(f"{name} ({unit})")
-    ax.set_ylabel("Frequency")
-    ax.set_title(f"{name} Distribution")
-    ax.grid(True, alpha=0.3)
-
-    # Add stats annotation
-    stats_text = f"n={len(values):,}\nmean={values.mean():.2f}\nstd={values.std():.2f}"
-    ax.text(
-        0.95,
-        0.95,
-        stats_text,
-        transform=ax.transAxes,
-        verticalalignment="top",
-        horizontalalignment="right",
-        fontsize=9,
-        # bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+def set_academic_style() -> None:
+    """Configure matplotlib for publication-quality figures."""
+    plt.rcParams.update(
+        {
+            "font.family": "serif",
+            "font.size": 11,
+            "axes.labelsize": 12,
+            "axes.titlesize": 13,
+            "xtick.labelsize": 10,
+            "ytick.labelsize": 10,
+            "figure.dpi": 300,
+            "savefig.dpi": 300,
+            "savefig.bbox": "tight",
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "axes.linewidth": 0.8,
+            "xtick.major.width": 0.8,
+            "ytick.major.width": 0.8,
+        }
     )
 
+
+def plot_sensor_boxplots_by_day(df: pd.DataFrame, output_dir: Path) -> None:
+    """Create boxplots of sensor means grouped by day.
+
+    One subplot per sensor (HR, EA, PG), with day1 and day2 side by side.
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(10, 4))
+
+    for ax, (sensor, info) in zip(axes, SENSORS.items(), strict=False):
+        sensor_data = df[df["sensor"] == sensor]
+
+        day1: pd.Series = sensor_data[sensor_data["day"] == "day1"]["mean"]  # type: ignore[assignment]
+        day2: pd.Series = sensor_data[sensor_data["day"] == "day2"]["mean"]  # type: ignore[assignment]
+
+        ax.boxplot(
+            [day1.dropna(), day2.dropna()],
+            labels=["Day 1", "Day 2"],
+            widths=0.5,
+            patch_artist=True,
+            boxprops={"facecolor": "white", "edgecolor": "black", "linewidth": 0.8},
+            medianprops={"color": "black", "linewidth": 1.2},
+            whiskerprops={"linewidth": 0.8},
+            capprops={"linewidth": 0.8},
+            flierprops={
+                "marker": "o",
+                "markersize": 4,
+                "markerfacecolor": "none",
+                "markeredgecolor": "black",
+            },
+        )
+
+        ax.set_ylabel(info["label"])
+        ax.set_title(info["title"])
+
+    fig.suptitle(
+        "Physiological Signal Mean Values by Day",
+        fontsize=14,
+        fontweight="bold",
+        y=1.02,
+    )
     plt.tight_layout()
-    if output_path:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(output_path, dpi=150)
-        print(f"Saved: {output_path.name}")
-        plt.close()
-    else:
-        plt.show()
+
+    path = output_dir / "boxplot_sensors_by_day.png"
+    fig.savefig(path)
+    print(f"Saved: {path}")
+    plt.close(fig)
+
+
+def plot_sensor_boxplots_by_study(df: pd.DataFrame, output_dir: Path) -> None:
+    """Create boxplots of sensor means grouped by study (CS2 vs MCI).
+
+    One subplot per sensor, with CS2 and MCI side by side.
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(10, 4))
+
+    for ax, (sensor, info) in zip(axes, SENSORS.items(), strict=False):
+        sensor_data = df[df["sensor"] == sensor]
+
+        cs2: pd.Series = sensor_data[sensor_data["study"] == "CS2"]["mean"]  # type: ignore[assignment]
+        mci: pd.Series = sensor_data[sensor_data["study"] == "MCI"]["mean"]  # type: ignore[assignment]
+
+        ax.boxplot(
+            [cs2.dropna(), mci.dropna()],
+            labels=["CS2", "MCI"],
+            widths=0.5,
+            patch_artist=True,
+            boxprops={"facecolor": "white", "edgecolor": "black", "linewidth": 0.8},
+            medianprops={"color": "black", "linewidth": 1.2},
+            whiskerprops={"linewidth": 0.8},
+            capprops={"linewidth": 0.8},
+            flierprops={
+                "marker": "o",
+                "markersize": 4,
+                "markerfacecolor": "none",
+                "markeredgecolor": "black",
+            },
+        )
+
+        ax.set_ylabel(info["label"])
+        ax.set_title(info["title"])
+
+    fig.suptitle("Sensor Mean Values by Study", fontsize=14, fontweight="bold", y=1.02)
+    plt.tight_layout()
+
+    path = output_dir / "boxplot_sensors_by_study.png"
+    fig.savefig(path)
+    print(f"Saved: {path}")
+    plt.close(fig)
+
+
+def plot_sensor_boxplots_by_day_and_study(df: pd.DataFrame, output_dir: Path) -> None:
+    """Create boxplots with 4 groups per sensor."""
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4.5))
+
+    groups = [
+        ("CS2\nDay 1", "CS2", "day1"),
+        ("CS2\nDay 2", "CS2", "day2"),
+        ("MCI\nDay 1", "MCI", "day1"),
+        ("MCI\nDay 2", "MCI", "day2"),
+    ]
+
+    for ax, (sensor, info) in zip(axes, SENSORS.items(), strict=False):
+        sensor_data = df[df["sensor"] == sensor]
+
+        data = []
+        labels = []
+        for label, study, day in groups:
+            subset: pd.Series = sensor_data[
+                (sensor_data["study"] == study) & (sensor_data["day"] == day)
+            ]["mean"]  # type: ignore[assignment]
+            data.append(subset.dropna())
+            labels.append(label)
+
+        ax.boxplot(
+            data,
+            labels=labels,
+            widths=0.5,
+            patch_artist=True,
+            boxprops={"facecolor": "white", "edgecolor": "black", "linewidth": 0.8},
+            medianprops={"color": "black", "linewidth": 1.2},
+            whiskerprops={"linewidth": 0.8},
+            capprops={"linewidth": 0.8},
+            flierprops={
+                "marker": "o",
+                "markersize": 4,
+                "markerfacecolor": "none",
+                "markeredgecolor": "black",
+            },
+        )
+
+        ax.set_ylabel(info["label"])
+        ax.set_title(info["title"])
+
+    fig.suptitle(
+        "Sensor Mean Values by Study and Day", fontsize=14, fontweight="bold", y=1.02
+    )
+    plt.tight_layout()
+
+    path = output_dir / "boxplot_sensors_by_day_and_study.png"
+    fig.savefig(path)
+    print(f"Saved: {path}")
+    plt.close(fig)
+
+
+def plot_correlation_heatmap(r_values_path: Path, day: str, output_dir: Path) -> None:
+    """Create a correlation heatmap from r-values CSV.
+
+    Replicates the style from the speech PCA correlation figures:
+    red-blue diverging colormap, bold white text for |r| >= 0.4,
+    VAS Labels xlabel, auto-scaling color range.
+    """
+    r_matrix = pd.read_csv(r_values_path, index_col="sensor")
+
+    # Sort columns alphabetically to match reference style
+    r_matrix = r_matrix.reindex(sorted(r_matrix.columns), axis=1)
+
+    # Format labels to match reference: "Negative_Affect", "VAS_belonging", etc.
+    col_labels = []
+    for c in r_matrix.columns:
+        if c.startswith("VAS_"):
+            col_labels.append(c)
+        else:
+            # positive_affect -> Positive_Affect
+            col_labels.append(c.replace("_", " ").title().replace(" ", "_"))
+
+    row_labels = [s.replace("_mean", "").replace("EA", "EDA") for s in r_matrix.index]
+
+    data = r_matrix.values.astype(float)
+    n_rows, n_cols = data.shape
+
+    # Auto-scale color range symmetrically around 0
+    abs_max = max(abs(data.min()), abs(data.max()))
+    vbound = round(abs_max + 0.1, 1)  # round up with small padding
+
+    fig, ax = plt.subplots(figsize=(n_cols * 1.2 + 1.5, n_rows * 1.0 + 1.5))
+
+    # Use default sans-serif font for this plot (matching reference)
+    with plt.rc_context({"font.family": "sans-serif"}):
+        im = ax.imshow(data, cmap="RdBu_r", vmin=-vbound, vmax=vbound, aspect="auto")
+
+        # Annotate each cell
+        for i in range(n_rows):
+            for j in range(n_cols):
+                val = data[i, j]
+                weight = "bold" if abs(val) >= 0.4 else "normal"
+                color = "white" if abs(val) >= 0.45 else "black"
+                ax.text(
+                    j,
+                    i,
+                    f"{val:.2f}",
+                    ha="center",
+                    va="center",
+                    fontsize=11,
+                    fontweight=weight,
+                    color=color,
+                )
+
+        # Axes
+        ax.set_xticks(np.arange(n_cols))
+        ax.set_yticks(np.arange(n_rows))
+        ax.set_xticklabels(col_labels, rotation=45, ha="right", fontsize=10)
+        ax.set_yticklabels(row_labels, fontsize=10)
+
+        ax.set_xlabel("VAS and PANAS Measures", fontsize=12)
+        ax.set_ylabel("Signal Means", fontsize=12)
+
+        day_label = day.replace("day", "Day ")
+        ax.set_title(
+            f"Pearson Correlation: Signals vs Survey ({day_label})",
+            fontsize=13,
+            fontweight="bold",
+            pad=12,
+        )
+
+        # Colorbar
+        cbar = fig.colorbar(im, ax=ax, shrink=0.8)
+        cbar.ax.tick_params(labelsize=9)
+
+        # Remove spines
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        plt.tight_layout()
+
+    path = output_dir / f"correlation_heatmap_{day}.png"
+    fig.savefig(path)
+    print(f"Saved: {path}")
+    plt.close(fig)
 
 
 if __name__ == "__main__":
-    import sys
+    script_dir = Path(__file__).resolve().parent
+    project_root = script_dir.parent.parent.parent
 
-    from load_data import discover_recordings, load_recording
+    cs2_path = (
+        project_root
+        / "src"
+        / "emotibit"
+        / "output"
+        / "emotibit_CS2_descriptive_stats.csv"
+    )
+    mci_path = project_root / "src" / "MCI" / "output" / "mci_descriptive_stats.csv"
+    output_dir = script_dir.parent / "outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    base_path = Path(sys.argv[1]) if len(sys.argv) > 1 else None
+    for path, name in [(cs2_path, "CS2 stats"), (mci_path, "MCI stats")]:
+        if not path.exists():
+            print(f"Error: {name} not found at {path}")
+            sys.exit(1)
 
-    if base_path and base_path.exists():
-        recordings = discover_recordings(base_path)
-        if recordings:
-            r = recordings[0]
-            print(f"Visualizing: {r.day}/{r.pair_id}/{r.participant}\n")
+    set_academic_style()
 
-            data = load_recording(r.path, r.timestamp)
-            output_dir = Path(__file__).parent.parent / "outputs"
+    df = load_combined_stats(cs2_path, mci_path)
+    print(f"Loaded {len(df)} rows ({df['study'].value_counts().to_dict()})")
 
-            # 1. Recording overview
-            plot_recording_overview(
-                data,
-                title=f"{r.pair_id} / {r.participant} / {r.day}",
-                output_path=output_dir
-                / f"{r.pair_id}_{r.participant}_{r.day}_overview.png",
-            )
+    # Exclude participants with saturated EA values (max == 10000)
+    # ea_saturated = df[(df["sensor"] == "EA") & (df["max"] == 10000.0)]
+    # bad_keys = set(zip(ea_saturated["day"], ea_saturated["participant"]))
+    # if bad_keys:
+    #     print(f"\nExcluding {len(bad_keys)} saturated EA:")
+    #     for day, pid in sorted(bad_keys):
+    #         print(f"  {day}/{pid}")
+    #     df = df[~df.apply(lambda r: (r["day"], r["participant"]) in bad_keys, axis=1)]
+    #     print(f"Remaining: {len(df)} rows")
 
-            # 2. Individual time series for key sensors
-            for sensor in ["HR", "EA", "T1"]:
-                if sensor in data:
-                    plot_time_series(
-                        data[sensor],
-                        sensor,
-                        output_path=output_dir
-                        / f"{r.pair_id}_{r.participant}_{r.day}_{sensor}.png",
-                    )
+    plot_sensor_boxplots_by_day(df, output_dir)
+    plot_sensor_boxplots_by_study(df, output_dir)
+    plot_sensor_boxplots_by_day_and_study(df, output_dir)
 
-            # 3. Distribution for HR
-            if "HR" in data:
-                plot_distribution(
-                    data["HR"],
-                    "HR",
-                    output_path=output_dir
-                    / f"{r.pair_id}_{r.participant}_{r.day}_HR_dist.png",
-                )
-
-            print(f"\nAll plots saved to: {output_dir}")
+    # Correlation heatmaps
+    for day in ["day1", "day2"]:
+        r_path = output_dir / f"correlation_{day}_r_values.csv"
+        if r_path.exists():
+            plot_correlation_heatmap(r_path, day, output_dir)
         else:
-            print("No recordings found")
-    else:
-        print("Usage: python visualize.py <emotibit_base_path>")
+            print(f"Skipping {day} heatmap: {r_path.name} not found")
